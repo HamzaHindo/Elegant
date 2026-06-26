@@ -10,3 +10,4 @@ PySide6_Essentials==6.11.1
 PyYAML==6.0.3
 setuptools==82.0.1
 shiboken6==6.11.1
+pywin32; platform_system == "Windows"

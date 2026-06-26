@@ -284,6 +284,7 @@ class SalariesTemplateWriter(ExcelTemplateWriter):
         ws.cell(row=row, column=10).fill = self.style_manager.primary_fill
         ws.cell(row=row, column=10).font = self.style_manager.header_font
         ws.cell(row=row, column=10).alignment = self.style_manager.center_alignment
+        ws.cell(row=row, column=10).number_format = "#,##0.00"
 
     def _write_week_section(
         self,
@@ -371,7 +372,7 @@ class SalariesTemplateWriter(ExcelTemplateWriter):
         formula = "=" + "+".join([f"J{r}" for r in week_total_rows])
         ws.cell(row=row, column=10).value = formula
         ws.cell(row=row, column=10).fill = self.style_manager.primary_fill
-        ws.cell(row=row, column=10).font = self.style_manager.large_bold_font
+        ws.cell(row=row, column=10).font = self.style_manager.header_font
         ws.cell(row=row, column=10).alignment = self.style_manager.center_alignment
 
         # Add outline border to grand total

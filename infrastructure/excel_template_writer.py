@@ -2,8 +2,12 @@
 Excel Template Writer - Base abstract class for Excel template generation.
 Provides common functionality for all template writers.
 """
+
+import os
+import sys
 from abc import ABC, abstractmethod
 
+import win32com.client as win32
 from openpyxl import Workbook
 
 from infrastructure.excel_style_manager import ExcelStyleManager
@@ -14,14 +18,14 @@ from infrastructure.file_manager import FileManager
 class ExcelTemplateWriter(ABC):
     """
     Abstract base class for Excel template writers.
-    
+
     Provides common functionality and enforces implementation of write method.
     """
 
     def __init__(self, output_directory: str = "./output"):
         """
         Initialize the template writer.
-        
+
         Args:
             output_directory: Directory where Excel files will be saved
         """
@@ -34,11 +38,11 @@ class ExcelTemplateWriter(ABC):
         """
         Convert column and row numbers to Excel cell reference.
         Delegates to worksheet helper for consistency.
-        
+
         Args:
             col: Column number (1-indexed)
             row: Row number (1-indexed)
-            
+
         Returns:
             Excel cell reference (e.g., "A1", "B2")
         """
@@ -47,16 +51,42 @@ class ExcelTemplateWriter(ABC):
     def create_workbook(self) -> Workbook:
         """
         Create a new workbook instance.
-        
+
         Returns:
             New Workbook object
         """
         return Workbook()
 
-    def save_workbook(self, wb: Workbook, year: int, month: int, filename_prefix: str = "", use_month_folder: bool = False):
+    def protect_workbook(self, path: str, password: str):
+        excel = win32.DispatchEx("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
+
+        try:
+            workbook = excel.Workbooks.Open(os.path.abspath(path))
+
+            workbook.SaveAs(
+                Filename=os.path.abspath(path),
+                FileFormat=51,  # .xlsx
+                Password=password,
+            )
+
+            workbook.Close(SaveChanges=False)
+
+        finally:
+            excel.Quit()
+
+    def save_workbook(
+        self,
+        wb: Workbook,
+        year: int,
+        month: int,
+        filename_prefix: str = "Attendance_",
+        use_month_folder: bool = False,
+    ):
         """
         Save the workbook to the output directory.
-        
+
         Args:
             wb: Workbook to save
             year: Year for filename
@@ -69,26 +99,31 @@ class ExcelTemplateWriter(ABC):
             if not filename_prefix:
                 filename_prefix = "Attendance_"
             filename = f"{filename_prefix}{month}_{year}.xlsx"
-            
+
             # Get path in month folder
-            output_path = self.file_manager.get_month_folder_output_path(year, month, filename)
+            output_path = self.file_manager.get_month_folder_output_path(
+                year, month, filename
+            )
         else:
             # Original behavior - save directly to output directory
             output_path = self.file_manager.prepare_for_generation(year, month)
-            
+
             if filename_prefix:
                 # Replace default prefix with custom one
                 output_path = output_path.replace("Attendance_", filename_prefix)
-        
+
         wb.save(output_path)
+
+        if filename_prefix == "Attendance_" or filename_prefix == "Salaries_":
+            if sys.platform == "win32":
+                self.protect_workbook(output_path, "nonos@2310")
 
     @abstractmethod
     def write(self, template):
         """
         Write the template to an Excel file.
         Must be implemented by subclasses.
-        
+
         Args:
             template: Template object containing data to write
         """
-        pass
