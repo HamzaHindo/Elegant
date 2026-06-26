@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import calendar
 from datetime import date
-from typing import List
 
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
@@ -35,9 +34,7 @@ class RevenueTemplateWriter(ExcelTemplateWriter):
         """
         super().__init__(output_directory)
 
-    def _prepare_employees_list(
-        self, employees: list[Employee], stylists
-    ) -> list[Employee]:
+    def _prepare_employees_list(self, employees, stylists):
         """
         Combine employees and stylists into a single list.
 
@@ -108,7 +105,7 @@ class RevenueTemplateWriter(ExcelTemplateWriter):
             Number of invoice rows created
         """
         row = 5
-        income_headers: List[str] = [
+        income_headers = [
             "عدد الفواتير",
             "المبلغ المحصل",
             "طريقة الدفع",
@@ -561,7 +558,9 @@ class RevenueTemplateWriter(ExcelTemplateWriter):
         ws = wb.create_sheet()
         ws.title = "كشف السلف"
         self.worksheet_helper.configure_worksheet(ws, rtl=True, show_grid=False)
-        self.worksheet_helper.apply_font_to_all(ws, self.style_manager.arial_regular_font)
+        self.worksheet_helper.apply_font_to_all(
+            ws, self.style_manager.arial_regular_font
+        )
 
         employees = self._prepare_employees_list(template.employees, template.stylists)
         num_employees = len(employees)
@@ -603,16 +602,22 @@ class RevenueTemplateWriter(ExcelTemplateWriter):
                 ws.cell(row=row, column=1).value = d
                 ws.cell(row=row, column=1).font = self.style_manager.dubai_bold_font
                 ws.cell(row=row, column=1).number_format = "dddd, mmmm d, yyyy"
-                ws.cell(row=row, column=1).alignment = self.style_manager.center_alignment
+                ws.cell(row=row, column=1).alignment = (
+                    self.style_manager.center_alignment
+                )
                 # Columns C onwards are left empty for manual entry
                 for i in range(num_employees):
                     col = 3 + i
-                    ws.cell(row=row, column=col).alignment = self.style_manager.center_alignment
+                    ws.cell(row=row, column=col).alignment = (
+                        self.style_manager.center_alignment
+                    )
                 row += 1
 
             # Week total row
             ws.merge_cells(f"A{row}:B{row}")
-            ws.cell(row=row, column=1).value = f"نهاية الأسبوع {to_arabic_ordinal(j + 1)}"
+            ws.cell(row=row, column=1).value = (
+                f"نهاية الأسبوع {to_arabic_ordinal(j + 1)}"
+            )
             ws.cell(row=row, column=1).fill = self.style_manager.primary_fill
             ws.cell(row=row, column=1).font = self.style_manager.arial_bold_font
             ws.cell(row=row, column=1).alignment = self.style_manager.center_alignment
@@ -624,7 +629,9 @@ class RevenueTemplateWriter(ExcelTemplateWriter):
                 ws.cell(row=row, column=col).value = f"=SUM({start_cell}:{end_cell})"
                 ws.cell(row=row, column=col).fill = self.style_manager.primary_fill
                 ws.cell(row=row, column=col).font = self.style_manager.arial_bold_font
-                ws.cell(row=row, column=col).alignment = self.style_manager.center_alignment
+                ws.cell(row=row, column=col).alignment = (
+                    self.style_manager.center_alignment
+                )
 
             each_week_total_row.append(row)
             row += 1

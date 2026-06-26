@@ -30,7 +30,7 @@ class AttendanceTemplateWriter(ExcelTemplateWriter):
         """
         super().__init__(output_directory)
 
-    def _prepare_employees_list(self, template) -> list[Employee]:
+    def _prepare_employees_list(self, template):
         """
         Combine employees and stylists into a single list.
 
@@ -75,7 +75,7 @@ class AttendanceTemplateWriter(ExcelTemplateWriter):
         ws["A2"].fill = self.style_manager.primary_fill
         ws["A2"].font = self.style_manager.arial_bold_font
 
-    def _write_employee_names(self, ws: Worksheet, employees: list[Employee], row: int):
+    def _write_employee_names(self, ws: Worksheet, employees, row: int):
         """
         Write employee names in the header row.
 
@@ -93,11 +93,11 @@ class AttendanceTemplateWriter(ExcelTemplateWriter):
     def _write_day_rows(
         self,
         ws: Worksheet,
-        week: list[int],
+        week,
         template,
-        employees: list[Employee],
+        employees,
         starting_row: int,
-    ) -> tuple[int, list[int]]:
+    ):
         """
         Write rows for each day in a week.
 
@@ -168,9 +168,9 @@ class AttendanceTemplateWriter(ExcelTemplateWriter):
         week_number: int,
         row: int,
         col: int,
-        employees: list[Employee],
-        each_day_total_row: list[int],
-    ) -> int:
+        employees,
+        each_day_total_row,
+    ):
         """
         Write the week total row.
 
@@ -215,8 +215,8 @@ class AttendanceTemplateWriter(ExcelTemplateWriter):
         ws: Worksheet,
         row: int,
         col: int,
-        employees: list[Employee],
-        each_week_total_row: list[int],
+        employees,
+        each_week_total_row,
     ):
         """
         Write the month total row.

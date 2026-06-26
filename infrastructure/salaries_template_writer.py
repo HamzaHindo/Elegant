@@ -28,7 +28,7 @@ class SalariesTemplateWriter(ExcelTemplateWriter):
         """
         super().__init__(output_directory)
 
-    def _prepare_employees_list(self, template: SalaryTemplate) -> list[Employee]:
+    def _prepare_employees_list(self, template: SalaryTemplate):
         """
         Combine employees and stylists into a single list.
 
