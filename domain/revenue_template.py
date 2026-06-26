@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import List
 
 from domain.employee import Employee, Stylist
 
@@ -10,7 +11,7 @@ from domain.employee import Employee, Stylist
 class RevenueTemplate:
     month: int
     year: int
-    days: list[date]
-    stylists: list[Stylist]
-    employees: list[Employee]  # list of Employee objects
-    payment_methods: list[str]
+    days: List[date]
+    stylists: List[Stylist]
+    employees: List[Employee]  # list of Employee objects
+    payment_methods: List[str]

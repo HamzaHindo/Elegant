@@ -3,6 +3,8 @@ Salaries Template Writer - Generates Excel salary sheets.
 Uses Excel formulas to link to attendance data for working hours.
 """
 
+from typing import List
+
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
@@ -291,7 +293,7 @@ class SalariesTemplateWriter(ExcelTemplateWriter):
         ws: Worksheet,
         starting_row: int,
         week_number: int,
-        employees: list[Employee],
+        employees: List[Employee],
         attendance_filename: str,
         borrows_filename: str,
         template: SalaryTemplate,
@@ -351,7 +353,7 @@ class SalariesTemplateWriter(ExcelTemplateWriter):
         self,
         ws: Worksheet,
         row: int,
-        week_total_rows: list[int],
+        week_total_rows: List[int],
     ):
         """
         Write the grand total row for all weeks.

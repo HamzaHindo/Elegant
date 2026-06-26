@@ -245,7 +245,7 @@ class RevenueTemplateWriter(ExcelTemplateWriter):
     def _write_expenses_section(
         self,
         ws: Worksheet,
-        employees: list[Employee],
+        employees: List[Employee],
         number_of_invoices: int,
         emp_sheet_name: str,
     ):

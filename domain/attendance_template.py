@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import List
 
 from .employee import Employee, Stylist
 
@@ -10,6 +11,6 @@ from .employee import Employee, Stylist
 class AttendanceTemplate:
     month: int
     year: int
-    employees: list[Employee]
-    stylists: list[Stylist]
-    days: list[date]
+    employees: List[Employee]
+    stylists: List[Stylist]
+    days: List[date]

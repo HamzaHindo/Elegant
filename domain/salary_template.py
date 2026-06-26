@@ -5,6 +5,7 @@ Salary Template Domain Model
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import List
 
 from domain.employee import Employee, Stylist
 
@@ -15,8 +16,8 @@ class SalaryTemplate:
 
     month: int
     year: int
-    employees: list[Employee]
-    stylists: list[Stylist]
+    employees: List[Employee]
+    stylists: List[Stylist]
     attendance_file_path: (
         str  # Path to the attendance Excel file to read working days from
     )
