@@ -1,0 +1,39 @@
+output_directory: ./output
+engine: libre
+employees:
+- name: سارة محمد
+  daily_rate: 60
+  working_hours: 7
+- name: عمر حسن
+  daily_rate: 55
+  working_hours: 9
+- name: يوسف عادل
+  daily_rate: 45
+  working_hours: 6
+- name: حمزة محمد
+  daily_rate: 1000
+  working_hours: 12
+stylists:
+- name: محمود مجدى
+  daily_target: 1500
+  daily_rate: 1000
+  working_hours: 12
+- name: يوسف مجدى
+  daily_target: 1500
+  daily_rate: 1000
+  working_hours: 12
+- name: شهد مجدى
+  daily_target: 1500
+  daily_rate: 1000
+  working_hours: 12
+- name: أحمد صلاح
+  daily_target: 1500
+  daily_rate: 1000
+  working_hours: 12
+- name: سالم حامد
+  daily_target: 100
+  daily_rate: 1000000
+  working_hours: 1
+payment_methods:
+- فيزا
+- كاش
