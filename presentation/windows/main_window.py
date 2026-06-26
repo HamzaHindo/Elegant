@@ -220,6 +220,7 @@ class MainWindow(QMainWindow):
         try:
             employees = self.config_manager.get_employees()
             stylists = self.config_manager.get_stylists()
+            attendance_filename = self.config_manager.get_filename("attendance")
             if not employees:
                 QMessageBox.warning(
                     self,

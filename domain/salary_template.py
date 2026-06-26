@@ -2,6 +2,8 @@
 Salary Template Domain Model
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from domain.employee import Employee, Stylist

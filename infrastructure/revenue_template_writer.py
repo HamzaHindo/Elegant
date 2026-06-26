@@ -3,6 +3,8 @@ Revenue Template Writer - Generates Excel revenue sheets.
 Refactored to use OOP principles with base classes for better reusability.
 """
 
+from __future__ import annotations
+
 import calendar
 from datetime import date
 from typing import List
