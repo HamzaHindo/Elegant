@@ -1,102 +1,112 @@
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
-    QMessageBox,
-    QPushButton,
-    QSpinBox,
-    QVBoxLayout,
-    QWidget,
-)
+import calendar
+import tkinter as tk
+from datetime import date
+from tkinter import messagebox, ttk
 
 from application.attendance_template_service import AttendanceTemplateService
 from application.revenue_template_service import RevenueTemplateService
 from application.salary_template_service import SalaryTemplateService
+from domain.attendance_template import AttendanceTemplate
+from domain.revenue_template import RevenueTemplate
+from domain.salary_template import SalaryTemplate
 from infrastructure.attendance_template_writer import AttendanceTemplateWriter
 from infrastructure.config_manager import ConfigManager
+from infrastructure.file_manager import FileManager
 from infrastructure.revenue_template_writer import RevenueTemplateWriter
 from infrastructure.salaries_template_writer import SalariesTemplateWriter
 from presentation.windows.settings_window import SettingsWindow
+from utils.calendar_utils import get_arabic_month
 
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("Elegant Barbershop")
-        self.setMinimumSize(400, 200)
+class MainWindow:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Elegant Barbershop")
+        self.root.geometry("500x350")
+        self.root.resizable(False, False)
 
         self.config_manager = ConfigManager()
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        self._build_ui()
 
-        layout = QVBoxLayout()
+    def _build_ui(self):
+        # Main frame with padding
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Title
-        layout.addWidget(QLabel("Monthly Reports Generator"))
+        title_label = ttk.Label(
+            main_frame, text="Monthly Reports Generator", font=("Arial", 14, "bold")
+        )
+        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 15))
 
         # Year and Month inputs
-        inputs_layout = QHBoxLayout()
+        ttk.Label(main_frame, text="Year:").grid(row=1, column=0, sticky=tk.W, padx=5)
+        self.year_spin = tk.Spinbox(main_frame, from_=2000, to=2100, width=10)
+        self.year_spin.delete(0, tk.END)
+        self.year_spin.insert(0, "2026")
+        self.year_spin.grid(row=1, column=1, sticky=tk.W, padx=5)
 
-        inputs_layout.addWidget(QLabel("Year:"))
-        self.year_spin = QSpinBox()
-        self.year_spin.setRange(2000, 2100)
-        self.year_spin.setValue(2026)
-        inputs_layout.addWidget(self.year_spin)
-
-        inputs_layout.addWidget(QLabel("Month:"))
-        self.month_spin = QSpinBox()
-        self.month_spin.setRange(1, 12)
-        self.month_spin.setValue(1)
-        inputs_layout.addWidget(self.month_spin)
-
-        layout.addLayout(inputs_layout)
+        ttk.Label(main_frame, text="Month:").grid(row=1, column=2, sticky=tk.W, padx=5)
+        self.month_spin = tk.Spinbox(main_frame, from_=1, to=12, width=10)
+        self.month_spin.delete(0, tk.END)
+        self.month_spin.insert(0, "1")
+        self.month_spin.grid(row=1, column=3, sticky=tk.W, padx=5)
 
         # Generate all button (main button)
-        self.generate_all_btn = QPushButton(
-            "Generate All Reports (Attendance + Revenue + Salaries)"
+        self.generate_all_btn = ttk.Button(
+            main_frame,
+            text="Generate All Reports (Attendance + Revenue + Salaries)",
+            command=self._on_generate_all,
         )
-        self.generate_all_btn.clicked.connect(self._on_generate_all)
-        self.generate_all_btn.setStyleSheet(
-            "QPushButton { font-weight: bold; padding: 10px; }"
+        self.generate_all_btn.grid(
+            row=2, column=0, columnspan=4, pady=(15, 10), sticky=(tk.W, tk.E)
         )
-        layout.addWidget(self.generate_all_btn)
 
-        # Individual generate buttons (in a horizontal layout)
-        individual_buttons_layout = QHBoxLayout()
+        # Individual generate buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=3, column=0, columnspan=4, pady=5, sticky=(tk.W, tk.E))
 
-        self.generate_attendance_btn = QPushButton("Attendance Only")
-        self.generate_attendance_btn.clicked.connect(self._on_generate_attendance)
-        individual_buttons_layout.addWidget(self.generate_attendance_btn)
+        self.generate_attendance_btn = ttk.Button(
+            button_frame, text="Attendance Only", command=self._on_generate_attendance
+        )
+        self.generate_attendance_btn.grid(row=0, column=0, padx=5, sticky=(tk.W, tk.E))
 
-        self.generate_revenue_btn = QPushButton("Revenue Only")
-        self.generate_revenue_btn.clicked.connect(self._on_generate_revenue)
-        individual_buttons_layout.addWidget(self.generate_revenue_btn)
+        self.generate_revenue_btn = ttk.Button(
+            button_frame, text="Revenue Only", command=self._on_generate_revenue
+        )
+        self.generate_revenue_btn.grid(row=0, column=1, padx=5, sticky=(tk.W, tk.E))
 
-        self.generate_salaries_btn = QPushButton("Salaries Only")
-        self.generate_salaries_btn.clicked.connect(self._on_generate_salaries)
-        individual_buttons_layout.addWidget(self.generate_salaries_btn)
+        self.generate_salaries_btn = ttk.Button(
+            button_frame, text="Salaries Only", command=self._on_generate_salaries
+        )
+        self.generate_salaries_btn.grid(row=0, column=2, padx=5, sticky=(tk.W, tk.E))
 
-        layout.addLayout(individual_buttons_layout)
+        # Configure button frame columns to expand equally
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+        button_frame.columnconfigure(2, weight=1)
 
         # Status label
-        self.status_label = QLabel("")
-        self.status_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.status_label)
+        self.status_label = ttk.Label(main_frame, text="", foreground="green")
+        self.status_label.grid(row=4, column=0, columnspan=4, pady=10)
 
         # Settings button
-        self.settings_btn = QPushButton("Settings")
-        self.settings_btn.clicked.connect(self._open_settings)
-        layout.addWidget(self.settings_btn)
+        self.settings_btn = ttk.Button(
+            main_frame, text="Settings", command=self._open_settings
+        )
+        self.settings_btn.grid(row=5, column=0, columnspan=4, pady=(5, 0))
 
-        central_widget.setLayout(layout)
+        # Configure main frame to expand
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(2, weight=1)
+        main_frame.columnconfigure(3, weight=1)
 
     def _on_generate_all(self):
         """Generate all three reports (Attendance, Revenue, Salaries) in a month folder."""
-        year = self.year_spin.value()
-        month = self.month_spin.value()
+        year = int(self.year_spin.get())
+        month = int(self.month_spin.get())
 
         try:
             employees = self.config_manager.get_employees()
@@ -104,34 +114,22 @@ class MainWindow(QMainWindow):
             payment_methods = self.config_manager.get_payment_methods()
 
             if not employees:
-                QMessageBox.warning(
-                    self,
+                messagebox.showwarning(
                     "No Employees",
                     "No employees found. Please add employees in Settings.",
                 )
                 return
 
             if not stylists:
-                QMessageBox.warning(
-                    self,
-                    "No Stylists",
-                    "No stylists found. Please add stylists in Settings.",
+                messagebox.showwarning(
+                    "No Stylists", "No stylists found. Please add stylists in Settings."
                 )
                 return
 
             output_dir = self.config_manager.get_output_directory()
 
-            self.status_label.setText("Generating reports...")
-
-            # Prepare month folder
-            import calendar
-            from datetime import date
-
-            from domain.attendance_template import AttendanceTemplate
-            from domain.revenue_template import RevenueTemplate
-            from domain.salary_template import SalaryTemplate
-            from infrastructure.file_manager import FileManager
-            from utils.calendar_utils import get_arabic_month
+            self.status_label.config(text="Generating reports...")
+            self.root.update()
 
             file_manager = FileManager(output_dir)
             month_folder = file_manager.prepare_month_folder_for_generation(year, month)
@@ -188,12 +186,11 @@ class MainWindow(QMainWindow):
 
             month_name = get_arabic_month(month)
 
-            self.status_label.setText(
-                f"✅ All reports generated successfully in folder: {month_name}/"
+            self.status_label.config(
+                text=f"✅ All reports generated successfully in folder: {month_name}/"
             )
 
-            QMessageBox.information(
-                self,
+            messagebox.showinfo(
                 "Success",
                 f"All reports generated successfully!\n\n"
                 f"Location: {month_folder}\n\n"
@@ -206,24 +203,22 @@ class MainWindow(QMainWindow):
             import traceback
 
             error_details = traceback.format_exc()
-            QMessageBox.critical(
-                self,
+            messagebox.showerror(
                 "Error",
                 f"Failed to generate reports:\n{str(e)}\n\nDetails:\n{error_details}",
             )
-            self.status_label.setText("Generation failed.")
+            self.status_label.config(text="Generation failed.", foreground="red")
 
     def _on_generate_attendance(self):
-        year = self.year_spin.value()
-        month = self.month_spin.value()
+        year = int(self.year_spin.get())
+        month = int(self.month_spin.get())
 
         try:
             employees = self.config_manager.get_employees()
             stylists = self.config_manager.get_stylists()
-            attendance_filename = self.config_manager.get_filename("attendance")
+
             if not employees:
-                QMessageBox.warning(
-                    self,
+                messagebox.showwarning(
                     "No Employees",
                     "No employees found. Please add employees in Settings.",
                 )
@@ -238,16 +233,17 @@ class MainWindow(QMainWindow):
                 month=month, year=year, employees=employees, stylists=stylists
             )
 
-            self.status_label.setText(
-                f"Generated Attendance_{month}_{year}.xlsx successfully!"
+            self.status_label.config(
+                text=f"Generated Attendance_{month}_{year}.xlsx successfully!",
+                foreground="green",
             )
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to generate sheet:\n{str(e)}")
-            self.status_label.setText("Generation failed.")
+            messagebox.showerror("Error", f"Failed to generate sheet:\n{str(e)}")
+            self.status_label.config(text="Generation failed.", foreground="red")
 
     def _on_generate_revenue(self):
-        year = self.year_spin.value()
-        month = self.month_spin.value()
+        year = int(self.year_spin.get())
+        month = int(self.month_spin.get())
 
         try:
             stylists = self.config_manager.get_stylists()
@@ -255,10 +251,8 @@ class MainWindow(QMainWindow):
             payment_methods = self.config_manager.get_payment_methods()
 
             if not stylists:
-                QMessageBox.warning(
-                    self,
-                    "No Stylists",
-                    "No stylists found. Please add stylists in Settings.",
+                messagebox.showwarning(
+                    "No Stylists", "No stylists found. Please add stylists in Settings."
                 )
                 return
 
@@ -275,25 +269,25 @@ class MainWindow(QMainWindow):
                 payment_methods=payment_methods,
             )
 
-            self.status_label.setText(
-                f"Generated Revenue_{month}_{year}.xlsx successfully!"
+            self.status_label.config(
+                text=f"Generated Revenue_{month}_{year}.xlsx successfully!",
+                foreground="green",
             )
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to generate sheet:\n{str(e)}")
-            self.status_label.setText("Generation failed.")
+            messagebox.showerror("Error", f"Failed to generate sheet:\n{str(e)}")
+            self.status_label.config(text="Generation failed.", foreground="red")
 
     def _on_generate_salaries(self):
         """Generate salaries sheet only."""
-        year = self.year_spin.value()
-        month = self.month_spin.value()
+        year = int(self.year_spin.get())
+        month = int(self.month_spin.get())
 
         try:
             employees = self.config_manager.get_employees()
             stylists = self.config_manager.get_stylists()
 
             if not employees:
-                QMessageBox.warning(
-                    self,
+                messagebox.showwarning(
                     "No Employees",
                     "No employees found. Please add employees in Settings.",
                 )
@@ -302,14 +296,18 @@ class MainWindow(QMainWindow):
             output_dir = self.config_manager.get_output_directory()
 
             # Ask user for attendance file path
-            from PySide6.QtWidgets import QFileDialog
+            from tkinter import filedialog
 
-            attendance_file_path, _ = QFileDialog.getOpenFileName(
-                self, "Select Attendance File", output_dir, "Excel Files (*.xlsx)"
+            attendance_file_path = filedialog.askopenfilename(
+                title="Select Attendance File",
+                initialdir=output_dir,
+                filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")],
             )
 
             if not attendance_file_path:
-                self.status_label.setText("Salaries generation cancelled.")
+                self.status_label.config(
+                    text="Salaries generation cancelled.", foreground="orange"
+                )
                 return
 
             writer = SalariesTemplateWriter(output_directory=output_dir)
@@ -323,15 +321,13 @@ class MainWindow(QMainWindow):
                 attendance_file_path=attendance_file_path,
             )
 
-            self.status_label.setText(
-                f"Generated Salaries_{month}_{year}.xlsx successfully!"
+            self.status_label.config(
+                text=f"Generated Salaries_{month}_{year}.xlsx successfully!",
+                foreground="green",
             )
         except Exception as e:
-            QMessageBox.critical(
-                self, "Error", f"Failed to generate salaries:\n{str(e)}"
-            )
-            self.status_label.setText("Generation failed.")
+            messagebox.showerror("Error", f"Failed to generate salaries:\n{str(e)}")
+            self.status_label.config(text="Generation failed.", foreground="red")
 
     def _open_settings(self):
-        settings_window = SettingsWindow(self.config_manager, parent=self)
-        settings_window.exec()
+        settings_window = SettingsWindow(self.root, self.config_manager)

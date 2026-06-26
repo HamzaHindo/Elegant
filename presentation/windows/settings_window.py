@@ -1,273 +1,554 @@
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QDialog,
-    QFileDialog,
-    QHBoxLayout,
-    QHeaderView,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPushButton,
-    QSpinBox,
-    QTableWidget,
-    QTableWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 
 from domain.employee import Employee
 from domain.revenue_template import Stylist
 from infrastructure.config_manager import ConfigManager
 
 
-class SettingsWindow(QDialog):
-    def __init__(self, config_manager: ConfigManager, parent=None):
-        super().__init__(parent)
+class SettingsWindow:
+    def __init__(self, parent, config_manager: ConfigManager):
+        self.parent = parent
         self.config_manager = config_manager
-        self.setWindowTitle("Settings")
-        self.setMinimumSize(600, 400)
+
+        # Create top-level window
+        self.window = tk.Toplevel(parent)
+        self.window.title("Settings")
+        self.window.geometry("700x600")
+        self.window.transient(parent)
+        self.window.grab_set()
 
         self._build_ui()
         self._load_data()
 
     def _build_ui(self):
-        layout = QVBoxLayout()
+        # Main frame with padding
+        main_frame = ttk.Frame(self.window, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Output Directory Section
-        dir_layout = QHBoxLayout()
-        dir_layout.addWidget(QLabel("Output Directory:"))
-        self.dir_input = QLineEdit()
-        self.dir_input.setReadOnly(True)
-        dir_layout.addWidget(self.dir_input)
+        dir_frame = ttk.LabelFrame(main_frame, text="Output Directory", padding="5")
+        dir_frame.pack(fill=tk.X, pady=(0, 10))
 
-        self.browse_btn = QPushButton("Browse...")
-        self.browse_btn.clicked.connect(self._browse_directory)
-        dir_layout.addWidget(self.browse_btn)
+        self.dir_input = ttk.Entry(dir_frame, state="readonly")
+        self.dir_input.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
-        layout.addLayout(dir_layout)
+        self.browse_btn = ttk.Button(
+            dir_frame, text="Browse...", command=self._browse_directory
+        )
+        self.browse_btn.pack(side=tk.RIGHT)
 
         # Employees Section
-        layout.addWidget(QLabel("Employees:"))
+        employees_frame = ttk.LabelFrame(main_frame, text="Employees", padding="5")
+        employees_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
-        self.employees_table = QTableWidget()
-        self.employees_table.setColumnCount(3)
-        self.employees_table.setHorizontalHeaderLabels(
-            ["Name", "Working Hours", "Daily Rate"]
+        # Employees table
+        employees_table_frame = ttk.Frame(employees_frame)
+        employees_table_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Scrollbars for employees table
+        employees_scroll_y = ttk.Scrollbar(employees_table_frame, orient=tk.VERTICAL)
+        employees_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+        employees_scroll_x = ttk.Scrollbar(employees_table_frame, orient=tk.HORIZONTAL)
+        employees_scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.employees_table = ttk.Treeview(
+            employees_table_frame,
+            columns=("name", "working_hours", "daily_rate"),
+            show="headings",
+            yscrollcommand=employees_scroll_y.set,
+            xscrollcommand=employees_scroll_x.set,
+            height=6,
         )
-        self.employees_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Stretch
-        )
-        self.employees_table.setSelectionBehavior(QTableWidget.SelectRows)
-        layout.addWidget(self.employees_table)
+
+        employees_scroll_y.config(command=self.employees_table.yview)
+        employees_scroll_x.config(command=self.employees_table.xview)
+
+        self.employees_table.heading("name", text="Name")
+        self.employees_table.heading("working_hours", text="Working Hours")
+        self.employees_table.heading("daily_rate", text="Daily Rate")
+
+        self.employees_table.column("name", width=200)
+        self.employees_table.column("working_hours", width=100)
+        self.employees_table.column("daily_rate", width=100)
+
+        self.employees_table.pack(fill=tk.BOTH, expand=True)
 
         # Buttons for employees
-        btn_layout = QHBoxLayout()
-        self.add_btn = QPushButton("Add Employee")
-        self.add_btn.clicked.connect(self._add_employee)
-        btn_layout.addWidget(self.add_btn)
+        employees_btn_frame = ttk.Frame(employees_frame)
+        employees_btn_frame.pack(fill=tk.X, pady=(5, 0))
 
-        self.remove_btn = QPushButton("Remove Selected")
-        self.remove_btn.clicked.connect(self._remove_employee)
-        btn_layout.addWidget(self.remove_btn)
+        self.add_employee_btn = ttk.Button(
+            employees_btn_frame, text="Add Employee", command=self._add_employee
+        )
+        self.add_employee_btn.pack(side=tk.LEFT, padx=(0, 5))
 
-        layout.addLayout(btn_layout)
+        self.edit_employee_btn = ttk.Button(
+            employees_btn_frame, text="Edit Selected", command=self._edit_employee
+        )
+        self.edit_employee_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.remove_employee_btn = ttk.Button(
+            employees_btn_frame, text="Remove Selected", command=self._remove_employee
+        )
+        self.remove_employee_btn.pack(side=tk.LEFT)
 
         # Stylists Section
-        layout.addWidget(QLabel("Stylists:"))
+        stylists_frame = ttk.LabelFrame(main_frame, text="Stylists", padding="5")
+        stylists_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
-        self.stylists_table = QTableWidget()
-        self.stylists_table.setColumnCount(4)
-        self.stylists_table.setHorizontalHeaderLabels(
-            ["Name", "Daily Target", "Daily Rate", "Working Hours"]
+        # Stylists table
+        stylists_table_frame = ttk.Frame(stylists_frame)
+        stylists_table_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Scrollbars for stylists table
+        stylists_scroll_y = ttk.Scrollbar(stylists_table_frame, orient=tk.VERTICAL)
+        stylists_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+        stylists_scroll_x = ttk.Scrollbar(stylists_table_frame, orient=tk.HORIZONTAL)
+        stylists_scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.stylists_table = ttk.Treeview(
+            stylists_table_frame,
+            columns=("name", "daily_target", "daily_rate", "working_hours"),
+            show="headings",
+            yscrollcommand=stylists_scroll_y.set,
+            xscrollcommand=stylists_scroll_x.set,
+            height=6,
         )
-        self.stylists_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.stylists_table.setSelectionBehavior(QTableWidget.SelectRows)
-        layout.addWidget(self.stylists_table)
+
+        stylists_scroll_y.config(command=self.stylists_table.yview)
+        stylists_scroll_x.config(command=self.stylists_table.xview)
+
+        self.stylists_table.heading("name", text="Name")
+        self.stylists_table.heading("daily_target", text="Daily Target")
+        self.stylists_table.heading("daily_rate", text="Daily Rate")
+        self.stylists_table.heading("working_hours", text="Working Hours")
+
+        self.stylists_table.column("name", width=150)
+        self.stylists_table.column("daily_target", width=100)
+        self.stylists_table.column("daily_rate", width=100)
+        self.stylists_table.column("working_hours", width=100)
+
+        self.stylists_table.pack(fill=tk.BOTH, expand=True)
 
         # Buttons for stylists
-        stylist_btn_layout = QHBoxLayout()
-        self.add_stylist_btn = QPushButton("Add Stylist")
-        self.add_stylist_btn.clicked.connect(self._add_stylist)
-        stylist_btn_layout.addWidget(self.add_stylist_btn)
+        stylists_btn_frame = ttk.Frame(stylists_frame)
+        stylists_btn_frame.pack(fill=tk.X, pady=(5, 0))
 
-        self.remove_stylist_btn = QPushButton("Remove Selected")
-        self.remove_stylist_btn.clicked.connect(self._remove_stylist)
-        stylist_btn_layout.addWidget(self.remove_stylist_btn)
+        self.add_stylist_btn = ttk.Button(
+            stylists_btn_frame, text="Add Stylist", command=self._add_stylist
+        )
+        self.add_stylist_btn.pack(side=tk.LEFT, padx=(0, 5))
 
-        layout.addLayout(stylist_btn_layout)
+        self.edit_stylist_btn = ttk.Button(
+            stylists_btn_frame, text="Edit Selected", command=self._edit_stylist
+        )
+        self.edit_stylist_btn.pack(side=tk.LEFT, padx=(0, 5))
 
-        # Save / Cancel
-        actions_layout = QHBoxLayout()
-        self.save_btn = QPushButton("Save")
-        self.save_btn.clicked.connect(self._save_settings)
-        actions_layout.addWidget(self.save_btn)
+        self.remove_stylist_btn = ttk.Button(
+            stylists_btn_frame, text="Remove Selected", command=self._remove_stylist
+        )
+        self.remove_stylist_btn.pack(side=tk.LEFT)
 
-        self.cancel_btn = QPushButton("Cancel")
-        self.cancel_btn.clicked.connect(self.reject)
-        actions_layout.addWidget(self.cancel_btn)
+        # Save / Cancel buttons
+        actions_frame = ttk.Frame(main_frame)
+        actions_frame.pack(fill=tk.X)
 
-        layout.addLayout(actions_layout)
+        self.save_btn = ttk.Button(
+            actions_frame, text="Save", command=self._save_settings
+        )
+        self.save_btn.pack(side=tk.LEFT, padx=(0, 5))
 
-        self.setLayout(layout)
+        self.cancel_btn = ttk.Button(
+            actions_frame, text="Cancel", command=self.window.destroy
+        )
+        self.cancel_btn.pack(side=tk.LEFT)
 
     def _load_data(self):
         config = self.config_manager.load()
-        self.dir_input.setText(config.get("output_directory", "./output"))
 
+        # Load output directory
+        output_dir = config.get("output_directory", "./output")
+        self.dir_input.config(state="normal")
+        self.dir_input.delete(0, tk.END)
+        self.dir_input.insert(0, output_dir)
+        self.dir_input.config(state="readonly")
+
+        # Load employees
         employees = config.get("employees", [])
-        self.employees_table.setRowCount(len(employees))
-        for i, emp in enumerate(employees):
-            self.employees_table.setItem(i, 0, QTableWidgetItem(emp.get("name", "")))
-            self.employees_table.setItem(
-                i, 1, QTableWidgetItem(str(emp.get("working_hours", "")))
-            )
-            self.employees_table.setItem(
-                i, 2, QTableWidgetItem(str(emp.get("daily_rate", "")))
+        for emp in employees:
+            self.employees_table.insert(
+                "",
+                tk.END,
+                values=(
+                    emp.get("name", ""),
+                    emp.get("working_hours", ""),
+                    emp.get("daily_rate", ""),
+                ),
             )
 
+        # Load stylists
         stylists = config.get("stylists", [])
-        self.stylists_table.setRowCount(len(stylists))
-        for i, s in enumerate(stylists):
-            self.stylists_table.setItem(i, 0, QTableWidgetItem(s.get("name", "")))
-            self.stylists_table.setItem(
-                i, 1, QTableWidgetItem(str(s.get("daily_target", "")))
-            )
-            self.stylists_table.setItem(
-                i, 2, QTableWidgetItem(str(s.get("daily_rate", "")))
-            )
-            self.stylists_table.setItem(
-                i, 3, QTableWidgetItem(str(s.get("working_hours", "")))
+        for s in stylists:
+            self.stylists_table.insert(
+                "",
+                tk.END,
+                values=(
+                    s.get("name", ""),
+                    s.get("daily_target", ""),
+                    s.get("daily_rate", ""),
+                    s.get("working_hours", ""),
+                ),
             )
 
     def _browse_directory(self):
-        directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
+        directory = filedialog.askdirectory(title="Select Output Directory")
         if directory:
-            self.dir_input.setText(directory)
+            self.dir_input.config(state="normal")
+            self.dir_input.delete(0, tk.END)
+            self.dir_input.insert(0, directory)
+            self.dir_input.config(state="readonly")
 
     def _add_employee(self):
-        row = self.employees_table.rowCount()
-        self.employees_table.insertRow(row)
-        self.employees_table.setItem(row, 0, QTableWidgetItem(""))
-        self.employees_table.setItem(row, 1, QTableWidgetItem("8"))
-        self.employees_table.setItem(row, 2, QTableWidgetItem("0"))
+        dialog = EmployeeDialog(self.window, "Add Employee")
+        if dialog.result:
+            name, working_hours, daily_rate = dialog.result
+            self.employees_table.insert(
+                "", tk.END, values=(name, working_hours, daily_rate)
+            )
+
+    def _edit_employee(self):
+        selected = self.employees_table.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select an employee to edit.")
+            return
+
+        item = selected[0]
+        values = self.employees_table.item(item, "values")
+
+        dialog = EmployeeDialog(
+            self.window,
+            "Edit Employee",
+            initial_values=(values[0], values[1], values[2]),
+        )
+        if dialog.result:
+            name, working_hours, daily_rate = dialog.result
+            self.employees_table.item(item, values=(name, working_hours, daily_rate))
 
     def _remove_employee(self):
-        selected = self.employees_table.selectedIndexes()
+        selected = self.employees_table.selection()
         if not selected:
-            return
-        rows = sorted(set(index.row() for index in selected), reverse=True)
-        for row in rows:
-            self.employees_table.removeRow(row)
-
-    def _add_stylist(self):
-        row = self.stylists_table.rowCount()
-        self.stylists_table.insertRow(row)
-        self.stylists_table.setItem(row, 0, QTableWidgetItem(""))
-        self.stylists_table.setItem(row, 1, QTableWidgetItem("1500"))
-        self.stylists_table.setItem(row, 2, QTableWidgetItem("0"))
-        self.stylists_table.setItem(row, 3, QTableWidgetItem("0"))
-
-    def _remove_stylist(self):
-        selected = self.stylists_table.selectedIndexes()
-        if not selected:
-            return
-        rows = sorted(set(index.row() for index in selected), reverse=True)
-        for row in rows:
-            self.stylists_table.removeRow(row)
-
-    def _save_settings(self):
-        output_dir = self.dir_input.text().strip()
-        if not output_dir:
-            QMessageBox.warning(
-                self, "Validation Error", "Output directory is required."
+            messagebox.showwarning(
+                "No Selection", "Please select an employee to remove."
             )
             return
 
-        employees = []
-        for row in range(self.employees_table.rowCount()):
-            name_item = self.employees_table.item(row, 0)
-            hours_item = self.employees_table.item(row, 1)
-            rate_item = self.employees_table.item(row, 2)
+        for item in selected:
+            self.employees_table.delete(item)
 
-            name = name_item.text().strip() if name_item else ""
-            hours_str = hours_item.text().strip() if hours_item else ""
-            rate_str = rate_item.text().strip() if rate_item else ""
+    def _add_stylist(self):
+        dialog = StylistDialog(self.window, "Add Stylist")
+        if dialog.result:
+            name, daily_target, daily_rate, working_hours = dialog.result
+            self.stylists_table.insert(
+                "", tk.END, values=(name, daily_target, daily_rate, working_hours)
+            )
+
+    def _edit_stylist(self):
+        selected = self.stylists_table.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select a stylist to edit.")
+            return
+
+        item = selected[0]
+        values = self.stylists_table.item(item, "values")
+
+        dialog = StylistDialog(
+            self.window,
+            "Edit Stylist",
+            initial_values=(values[0], values[1], values[2], values[3]),
+        )
+        if dialog.result:
+            name, daily_target, daily_rate, working_hours = dialog.result
+            self.stylists_table.item(
+                item, values=(name, daily_target, daily_rate, working_hours)
+            )
+
+    def _remove_stylist(self):
+        selected = self.stylists_table.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select a stylist to remove.")
+            return
+
+        for item in selected:
+            self.stylists_table.delete(item)
+
+    def _save_settings(self):
+        output_dir = self.dir_input.get().strip()
+        if not output_dir:
+            messagebox.showwarning(
+                "Validation Error", "Output directory is required."
+            )
+            return
+
+        # Collect employees
+        employees = []
+        for item in self.employees_table.get_children():
+            values = self.employees_table.item(item, "values")
+            name = values[0].strip()
+            hours_str = values[1]
+            rate_str = values[2]
 
             if not name:
-                QMessageBox.warning(
-                    self,
-                    "Validation Error",
-                    f"Employee name is required at row {row + 1}.",
+                messagebox.showwarning(
+                    "Validation Error", "All employees must have a name."
                 )
                 return
 
             try:
                 hours = int(hours_str)
             except ValueError:
-                QMessageBox.warning(
-                    self, "Validation Error", f"Invalid working hours at row {row + 1}."
+                messagebox.showwarning(
+                    "Validation Error",
+                    f"Invalid working hours for employee '{name}'.",
                 )
                 return
 
             try:
                 rate = int(rate_str)
             except ValueError:
-                QMessageBox.warning(
-                    self, "Validation Error", f"Invalid daily rate at row {row + 1}."
+                messagebox.showwarning(
+                    "Validation Error", f"Invalid daily rate for employee '{name}'."
                 )
                 return
 
             employees.append(Employee(name=name, working_hours=hours, daily_rate=rate))
 
+        # Collect stylists
         stylists = []
-        for row in range(self.stylists_table.rowCount()):
-            name_item = self.stylists_table.item(row, 0)
-            target_item = self.stylists_table.item(row, 1)
-            rate_item = self.stylists_table.item(row, 2)
-            hours_item = self.stylists_table.item(row, 3)
-
-            name = name_item.text().strip() if name_item else ""
-            target_str = target_item.text().strip() if target_item else ""
-            rate_str = rate_item.text().strip() if rate_item else ""
-            hours_str = hours_item.text().strip() if hours_item else ""
+        for item in self.stylists_table.get_children():
+            values = self.stylists_table.item(item, "values")
+            name = values[0].strip()
+            target_str = values[1]
+            rate_str = values[2]
+            hours_str = values[3]
 
             if not name:
-                QMessageBox.warning(
-                    self,
-                    "Validation Error",
-                    f"Stylist name is required at row {row + 1}.",
+                messagebox.showwarning(
+                    "Validation Error", "All stylists must have a name."
                 )
                 return
 
             try:
                 target = int(target_str)
             except ValueError:
-                QMessageBox.warning(
-                    self, "Validation Error", f"Invalid daily target at row {row + 1}."
+                messagebox.showwarning(
+                    "Validation Error", f"Invalid daily target for stylist '{name}'."
                 )
                 return
 
             try:
                 rate = int(rate_str)
             except ValueError:
-                QMessageBox.warning(
-                    self, "Validation Error", f"Invalid daily rate at row {row + 1}."
+                messagebox.showwarning(
+                    "Validation Error", f"Invalid daily rate for stylist '{name}'."
                 )
                 return
 
             try:
                 hours = int(hours_str)
             except ValueError:
-                QMessageBox.warning(
-                    self, "Validation Error", f"Invalid working hours at row {row + 1}."
+                messagebox.showwarning(
+                    "Validation Error", f"Invalid working hours for stylist '{name}'."
                 )
                 return
 
-            stylists.append(Stylist(name=name, daily_target=target, daily_rate=rate, working_hours=hours))
+            stylists.append(
+                Stylist(
+                    name=name, daily_target=target, daily_rate=rate, working_hours=hours
+                )
+            )
 
         self.config_manager.set_output_directory(output_dir)
         self.config_manager.set_employees(employees)
         self.config_manager.set_stylists(stylists)
 
-        QMessageBox.information(self, "Success", "Settings saved successfully.")
-        self.accept()
+        messagebox.showinfo("Success", "Settings saved successfully.")
+        self.window.destroy()
+
+
+class EmployeeDialog:
+    def __init__(self, parent, title, initial_values=None):
+        self.result = None
+
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.title(title)
+        self.dialog.geometry("350x150")
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+
+        # Create form
+        form_frame = ttk.Frame(self.dialog, padding="10")
+        form_frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(form_frame, text="Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.name_entry = ttk.Entry(form_frame, width=30)
+        self.name_entry.grid(row=0, column=1, pady=5)
+
+        ttk.Label(form_frame, text="Working Hours:").grid(
+            row=1, column=0, sticky=tk.W, pady=5
+        )
+        self.hours_entry = ttk.Entry(form_frame, width=30)
+        self.hours_entry.grid(row=1, column=1, pady=5)
+
+        ttk.Label(form_frame, text="Daily Rate:").grid(
+            row=2, column=0, sticky=tk.W, pady=5
+        )
+        self.rate_entry = ttk.Entry(form_frame, width=30)
+        self.rate_entry.grid(row=2, column=1, pady=5)
+
+        # Buttons
+        btn_frame = ttk.Frame(form_frame)
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=10)
+
+        ttk.Button(btn_frame, text="OK", command=self._ok).pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
+        ttk.Button(btn_frame, text="Cancel", command=self.dialog.destroy).pack(
+            side=tk.LEFT
+        )
+
+        # Load initial values if provided
+        if initial_values:
+            self.name_entry.insert(0, initial_values[0])
+            self.hours_entry.insert(0, initial_values[1])
+            self.rate_entry.insert(0, initial_values[2])
+        else:
+            self.hours_entry.insert(0, "8")
+            self.rate_entry.insert(0, "0")
+
+        self.name_entry.focus()
+
+        # Wait for dialog to close
+        self.dialog.wait_window()
+
+    def _ok(self):
+        name = self.name_entry.get().strip()
+        hours = self.hours_entry.get().strip()
+        rate = self.rate_entry.get().strip()
+
+        if not name:
+            messagebox.showwarning("Validation Error", "Name is required.")
+            return
+
+        try:
+            int(hours)
+        except ValueError:
+            messagebox.showwarning("Validation Error", "Working hours must be a number.")
+            return
+
+        try:
+            int(rate)
+        except ValueError:
+            messagebox.showwarning("Validation Error", "Daily rate must be a number.")
+            return
+
+        self.result = (name, hours, rate)
+        self.dialog.destroy()
+
+
+class StylistDialog:
+    def __init__(self, parent, title, initial_values=None):
+        self.result = None
+
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.title(title)
+        self.dialog.geometry("350x180")
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+
+        # Create form
+        form_frame = ttk.Frame(self.dialog, padding="10")
+        form_frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(form_frame, text="Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.name_entry = ttk.Entry(form_frame, width=30)
+        self.name_entry.grid(row=0, column=1, pady=5)
+
+        ttk.Label(form_frame, text="Daily Target:").grid(
+            row=1, column=0, sticky=tk.W, pady=5
+        )
+        self.target_entry = ttk.Entry(form_frame, width=30)
+        self.target_entry.grid(row=1, column=1, pady=5)
+
+        ttk.Label(form_frame, text="Daily Rate:").grid(
+            row=2, column=0, sticky=tk.W, pady=5
+        )
+        self.rate_entry = ttk.Entry(form_frame, width=30)
+        self.rate_entry.grid(row=2, column=1, pady=5)
+
+        ttk.Label(form_frame, text="Working Hours:").grid(
+            row=3, column=0, sticky=tk.W, pady=5
+        )
+        self.hours_entry = ttk.Entry(form_frame, width=30)
+        self.hours_entry.grid(row=3, column=1, pady=5)
+
+        # Buttons
+        btn_frame = ttk.Frame(form_frame)
+        btn_frame.grid(row=4, column=0, columnspan=2, pady=10)
+
+        ttk.Button(btn_frame, text="OK", command=self._ok).pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
+        ttk.Button(btn_frame, text="Cancel", command=self.dialog.destroy).pack(
+            side=tk.LEFT
+        )
+
+        # Load initial values if provided
+        if initial_values:
+            self.name_entry.insert(0, initial_values[0])
+            self.target_entry.insert(0, initial_values[1])
+            self.rate_entry.insert(0, initial_values[2])
+            self.hours_entry.insert(0, initial_values[3])
+        else:
+            self.target_entry.insert(0, "1500")
+            self.rate_entry.insert(0, "0")
+            self.hours_entry.insert(0, "0")
+
+        self.name_entry.focus()
+
+        # Wait for dialog to close
+        self.dialog.wait_window()
+
+    def _ok(self):
+        name = self.name_entry.get().strip()
+        target = self.target_entry.get().strip()
+        rate = self.rate_entry.get().strip()
+        hours = self.hours_entry.get().strip()
+
+        if not name:
+            messagebox.showwarning("Validation Error", "Name is required.")
+            return
+
+        try:
+            int(target)
+        except ValueError:
+            messagebox.showwarning("Validation Error", "Daily target must be a number.")
+            return
+
+        try:
+            int(rate)
+        except ValueError:
+            messagebox.showwarning("Validation Error", "Daily rate must be a number.")
+            return
+
+        try:
+            int(hours)
+        except ValueError:
+            messagebox.showwarning("Validation Error", "Working hours must be a number.")
+            return
+
+        self.result = (name, target, rate, hours)
+        self.dialog.destroy()
