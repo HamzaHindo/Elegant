@@ -19,7 +19,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
-
+          
+      - name: Show commit
+        run: |
+          git log --oneline -1
+          
       - name: Build
         run: |
           pyinstaller --onedir --windowed main.py
